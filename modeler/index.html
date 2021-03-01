@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modeler</title>
+    <style>
+        :root {
+            background: seashell;
+            font-size: 125%;
+        }
+        * {
+            box-sizing: border-box;
+        }
+        button, input {
+            padding: 1rem 1.5rem;
+            border: none;
+        }
+        button.inline {
+            padding: 0.5rem 1rem;
+            margin: 0.5rem;
+            display: inline;
+        }
+        button.red { background-color: rgb(241, 161, 161); }
+        button.red:hover { background-color: rgb(202, 157, 157); }
+        button.green { background-color: rgb(87, 224, 137); }
+        button.green:hover { background-color: rgb(90, 179, 120); }
+        .closed {
+            display: none;
+        }
+        body {
+            display: grid;
+        }
+        main {
+            display: flex;
+            flex-wrap: wrap;
+            font-size: 1rem;
+            width: 100%;
+            height: 100%;
+            padding: 1rem;
+        }
+        main>.save {
+            position: fixed;
+            right: 4rem;
+            bottom: 4rem;
+            width: 10rem;
+            height: 4rem;
+        }
+        .card {
+            width: 15rem;
+            height: 12rem;
+            margin: 0 1rem 3rem 0;
+            border: solid 1px darkgray;
+            background: seashell;
+        }
+        .card.data {
+            padding: 1rem;
+        }
+        .card.selected {
+            border-color: green;
+        }
+        .card.holder {
+            font-size: 3rem;
+        }
+        .editor {
+            position: fixed;
+            padding: 2rem;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: snow;
+        }
+        .editor h1,
+        .editor h2 {
+            display: inline;
+            margin: 1rem;
+        }
+        .editor button.close {
+            display: inline;
+            background: #0000;
+            font-size: 2rem;
+        }
+        .editor button.close:hover {
+            background: rgb(247, 226, 226);
+        }
+        .editor .list>h3.selected {
+            color: green;
+        }
+        .editor.field .types>button.selected {
+            background: rgb(87, 224, 137);
+        }
+        .modifier>.modifiers {
+            display: flex;
+            flex-wrap: wrap;
+        }
+        span.tag {
+            display: inline;
+            padding: 0.5rem 1rem;
+            margin: 0.5rem 1rem 0.5rem 0;
+            background: rgb(199, 199, 199);
+            border-radius: 2rem;
+            cursor: default;
+        }
+        span.tag:hover {
+            background: rgb(247, 226, 226);
+        }
+        span.tag::after {
+            content: " ✕ ";
+            margin-left: 0.5rem;
+            border-radius: 100%;
+        }
+    </style>
+</head>
+<body>
+    <!-- main -->
+    <main>
+        <template id="dataTemplate">
+            <div class="card data {selected}">
+                <h1>{Name}</h1>
+                <p>{props}</p>
+                <button onclick="openEditor('{name}')">Edit</button>
+                <button class="red" onclick="remove('{name}')">Remove</button>
+            </div>
+        </template>
+        <button class="card holder" onclick="openEditor()">+</button>
+        <button class="save green" onclick="saveModel()">Save</button>
+    </main>
+    <!-- collection editor -->
+    <div class="editor closed">
+        <button class="close" onclick="closeEditor()">✕</button>
+        <h2>Collection</h2>
+        <h1 onclick="openRenamer()">Name</h1>
+        <input type="text" placeholder="Name" class="renamer closed">
+        <button onclick="rename()" class="renamerBtn closed">Done</button>
+        <button onclick="quitRename()" class="renamerCloseBtn closed">✕</button>
+        <hr>
+        <h2>Fields</h2>
+        <template id="fieldTemplate">
+            <h3 class="{selected}">
+                {name} <sub> {type}</sub>
+                <button class="inline" onclick="openFieldEditor('{name}')">Edit</button>
+                <button class="inline red" onclick="removeField('{name}')">Remove</button>
+            </h3>
+        </template>
+        <div class="list"></div>
+        <hr>
+        <button onclick="openFieldEditor()">New field</button>
+        <button class="saveBtn" onclick="save()">Save</button>
+    </div>
+    <!-- field editor -->
+    <div class="editor field closed">
+        <button class="close" onclick="closeFieldEditor()">✕</button>
+        <h2>Field</h2>
+        <h1 onclick="openFieldRenamer()">Name</h1>
+        <input type="text" placeholder="Name" class="renamer closed">
+        <button onclick="renameField()" class="renamerBtn closed">Done</button>
+        <button onclick="quitRenameField()" class="renamerCloseBtn closed">✕</button>
+        <hr>
+        <h3 class="header" onclick="openFieldTypeModifier()">Type</h3>
+        <div class="types">
+            <button onclick="openFieldTypeModifier(this)" class="typeAny">Any</button>
+            <button onclick="openFieldTypeModifier(this)" class="typeNumber">Number</button>
+            <button onclick="openFieldTypeModifier(this)" class="typeString">String</button>
+            <button onclick="openFieldTypeModifier(this)" class="typeBoolean">Boolean</button>
+            <button onclick="openFieldTypeModifier(this)" class="typeDate">Date</button>
+            <button onclick="openFieldTypeModifier(this)" class="typeTime">Time</button>
+            <button onclick="openFieldTypeModifier(this)" class="typeDatetime">Datetime</button>
+            <button onclick="openFieldTypeModifier(this)" class="typePassword">Password</button>
+            <button onclick="openFieldTypeModifier(this)" class="typeArticle">Article</button>
+            <button onclick="openFieldTypeModifier(this)" class="typeFile">File</button>
+            <button onclick="openFieldTypeModifier(this)" class="typeLocation">Location</button>
+            <button onclick="openFieldTypeModifier(this)" class="typeUser">User</button>
+            <button onclick="openFieldTypeModifier(this)" class="typeRole">Role</button>
+            <button onclick="openFieldTypeModifier(this)" class="typeRelation">Relation</button>
+        </div>
+        <div class="modifier closed">
+            <hr>
+            <h2 class="inline">Options</h2>
+            <input type="text" placeholder="unique, min=0, required, etc.">
+            <button class="modifierBtn" onclick="addTypeModifier()">+</button>
+            <button onclick="quitFieldTypeModifier()">✕</button>
+            <br>
+            <div class="modifiers">
+                <!-- <span onclick="removeModifierTag('tag')" class="tag">tag</span> -->
+            </div>
+        </div>
+        <hr>
+        <button class="saveBtn" onclick="saveField()">Save</button>
+    </div>
+    <script>
+        let data = {}
+        let now = null
+        let nowField = null
+        let state = "main"
+
+        // collection editor
+        function openEditor(name) {
+            let editor = document.getElementsByClassName('editor')[0]
+            editor.classList.remove('closed')
+            if(!data[name]) {
+                now = {
+                    name: "unnamed",
+                    fields: {}
+                }
+            } else {
+                now = clone(data[name])
+            }
+            document.querySelector(".editor>h1").innerHTML = cased(now.name)
+            refreshFields()
+            setState("editor")
+            if(now.name === "unnamed") {
+                openRenamer()
+            }
+        }
+        function closeEditor() {
+            let editor = document.getElementsByClassName('editor')[0]
+            editor.classList.add('closed')
+            setState("main")
+        }
+
+        function openRenamer() {
+            selectedFieldName = null
+            refreshFields()
+            let renamer = document.getElementsByClassName('renamer')[0]
+            renamer.classList.remove('closed')
+            renamer.focus()
+            let renamerBtn = document.getElementsByClassName('renamerBtn')[0]
+            renamerBtn.classList.remove('closed')
+            let renamerCloseBtn = document.getElementsByClassName('renamerCloseBtn')[0]
+            renamerCloseBtn.classList.remove('closed')
+            renamer.value = ""
+            setState("renamer")
+        }
+        function rename() {
+            let renamer = document.getElementsByClassName('renamer')[0]
+            if(!renamer.value) {
+                alert("name can not be empty")
+                return openRenamer()
+            }
+            now.oldName = now.name
+            now.name = renamer.value
+            document.querySelector(".editor>h1").innerHTML = cased(now.name)
+            quitRename()
+        }
+        function quitRename() {
+            let renamer = document.getElementsByClassName('renamer')[0]
+            renamer.classList.add('closed')
+            let renamerBtn = document.getElementsByClassName('renamerBtn')[0]
+            renamerBtn.classList.add('closed')
+            let renamerCloseBtn = document.getElementsByClassName('renamerCloseBtn')[0]
+            renamerCloseBtn.classList.add('closed')
+            setState("editor")
+            
+        }
+        function save() {
+            if(now.name === "unnamed") {
+                alert("name the collection before saving")
+                return openRenamer()
+            }
+            data[now.name] = now
+            if(now.oldName) {
+                delete data[now.oldName]
+                delete now.oldName
+            }
+            now = null
+            nowField = null
+            closeEditor()
+            refresh()
+        }
+        function remove(name) {
+            delete data[name];
+            refresh()
+        }
+        function refresh() {
+            let main = document.querySelector("main")
+            let holder = document.querySelector(".card.holder")
+            main.removeChild(holder)
+            for(let card of document.querySelectorAll("main .card.data")) {
+                card.remove()
+            }
+            for(let name in data) {
+                let col = data[name]
+                let t = render(name)
+                main.innerHTML += t
+            }
+            main.appendChild(holder)
+        }
+        function render(name) {
+            let col = data[name]
+            if(!col) {
+                return ''
+            }
+
+            let template = document.getElementById("dataTemplate").innerHTML
+            template = template.split('{name}').join(col.name)
+            .split('{Name}').join(cased(col.name))
+            .split('{selected}').join(col.name === selectedName ? "selected" : "")
+            let fields = []
+            for(let fname in col.fields) {
+                let field = col.fields[fname]
+                fields.push(field.name)
+            }
+            fields = fields.join(', ')
+            if(fields.length > 20) {
+                fields = fields.slice(0, 17) + "..."
+            }
+            template = template.split('{props}').join(fields)
+            return template
+        }
+
+        // field editor
+        function openFieldEditor(name) {
+            let editor = document.getElementsByClassName('editor')[1]
+            editor.classList.remove('closed')
+            if(!now.fields[name]) {
+                nowField = {
+                    name: "unnamed",
+                    type: "any"
+                }
+            } else {
+                nowField = clone(now.fields[name])
+            }
+            document.querySelector(".editor.field>h1").innerHTML = cased(nowField.name)
+            refreshFieldType()
+
+            setState("fieldEditor")
+            if(nowField.name === "unnamed") {
+                openFieldRenamer()
+            }
+        }
+
+        function closeFieldEditor() {
+            let editor = document.getElementsByClassName('editor')[1]
+            editor.classList.add('closed')
+            quitRename()
+            selectedFieldName = null
+            refreshFields()
+            setState("editor")
+        }
+
+        function openFieldRenamer() {
+            refreshFieldType()
+            let renamer = document.getElementsByClassName('renamer')[1]
+            renamer.classList.remove('closed')
+            renamer.focus()
+            let renamerBtn = document.getElementsByClassName('renamerBtn')[1]
+            renamerBtn.classList.remove('closed')
+            let renamerCloseBtn = document.getElementsByClassName('renamerCloseBtn')[1]
+            renamerCloseBtn.classList.remove('closed')
+            renamer.value = ""
+            setState("fieldRenamer")
+        }
+        function renameField() {
+            let renamer = document.getElementsByClassName('renamer')[1]
+            if(!renamer.value) {
+                alert("name can not be empty")
+                return openFieldRenamer()
+            }
+            nowField.oldName = nowField.name
+            nowField.name = renamer.value
+            document.querySelector(".editor.field>h1").innerHTML = cased(nowField.name)
+            quitRenameField()
+        }
+        function quitRenameField() {
+            let renamer = document.getElementsByClassName('renamer')[1]
+            renamer.classList.add('closed')
+            let renamerBtn = document.getElementsByClassName('renamerBtn')[1]
+            renamerBtn.classList.add('closed')
+            let renamerCloseBtn = document.getElementsByClassName('renamerCloseBtn')[1]
+            renamerCloseBtn.classList.add('closed')
+            setState("fieldEditor")
+        }
+        function refreshFieldType() {
+            let selected = document.querySelector(".editor.field>.types>button.selected")
+            if(selected) {
+                selected.classList.remove("selected")
+            }
+            selectedFieldType = document.querySelector(".editor.field>.types>button.type" + cased(nowField.type))
+            selectedFieldType.classList.add("selected")
+
+
+            let header = document.querySelector(".editor.field>.header")
+            let hh = `Type <sub>${nowField.type}`
+            if(nowField.options) {
+                let countOption = 0
+                for(let key in nowField.options) {
+                    countOption ++
+                }
+                if(countOption > 0) {
+                    hh += " ("
+                    for(let opt in nowField.options) {
+                        let val = nowField.options[opt]
+                        hh += ` ${opt}`
+                        if(val !== true) {
+                            hh += `: ${val}`
+                        }
+                    }
+                    hh += " )"
+                }
+            }
+            header.innerHTML = hh + "</sub>"
+        }
+        function openFieldTypeModifier(btn) {
+            quitRenameField()
+            if(btn) {
+                if(selectedFieldType) {
+                    selectedFieldType.classList.remove("selected")
+                }
+                selectedFieldType = btn
+                selectedFieldType.classList.add("selected")
+            }
+            let type = decased(selectedFieldType.innerText)
+            if(nowField.type !== type) {
+                nowField.newOptions = {}
+            } else {
+                nowField.newOptions = clone(nowField.options) || {}
+            }
+            
+            // if(type === "any") {
+            //     return quitFieldTypeModifier()
+            // }
+
+            let modifier = document.querySelector(".editor.field>.modifier")
+            modifier.classList.remove("closed")
+            let options = document.querySelector(".editor.field>.modifier>input")
+            options.value = ""
+            options.focus()
+            refreshModifier()
+            setState("fieldTypeModifier")
+        }
+        function refreshModifier() {
+            let options = document.querySelector(".editor.field>.modifier>input")
+            let btn = document.querySelector(".editor.field>.modifier>.modifierBtn")
+            btn.innerText = options.value.length > 0 ? "+" : "Done";
+            // render modifier tags
+            let modifiers = document.querySelector(".editor.field>.modifier>.modifiers")
+            modifiers.innerHTML = ""
+            for(let opt in nowField.newOptions) {
+                let val = nowField.newOptions[opt]
+                let template = `<span onclick="removeModifierTag('${opt}')" class="tag">${opt}`
+                if(val !== true) {
+                    template += `: ${val}`
+                }
+                template += `</span>`
+                modifiers.innerHTML += template
+            }
+        }
+        function removeModifierTag(tag) {
+            delete nowField.newOptions[tag]
+            refreshModifier()
+        }
+        function quitFieldTypeModifier() {
+            delete nowField.newOptions
+            refreshFieldType()
+            let modifier = document.querySelector(".editor.field>.modifier")
+            modifier.classList.add("closed")
+            setState("fieldEditor")
+        }
+        function addTypeModifier() {
+            let options = document.querySelector(".editor.field>.modifier>input")
+            if(!options.value) {
+                return saveTypeModifier();
+            }
+
+            let opt = options.value.split(" ").join("").split("=")
+            
+            if(!nowField.newOptions) {
+                return;
+            }
+
+            nowField.newOptions[opt[0]] = opt[1] || true
+            options.value = ""
+            options.focus()
+            refreshModifier()
+        }
+        function saveTypeModifier() {
+            if(nowField.newOptions) {
+                nowField.options = nowField.newOptions
+                delete nowField.newOptions
+            }
+            nowField.type = decased(selectedFieldType.innerText)
+            quitFieldTypeModifier()
+        }
+
+        function saveField() {
+            if(nowField.name === "unnamed") {
+                alert("name the field before saving")
+                return openFieldRenamer()
+            }
+
+            now.fields[nowField.name] = nowField
+            if(nowField.oldName) {
+                delete now.fields[nowField.oldName]
+                delete nowField.oldName
+            }
+            nowField = null
+            selectedFieldType = null
+            closeFieldEditor()
+            refreshFields()
+        }
+        function refreshFields() {
+            let list = document.querySelector(".editor>.list")
+            list.innerHTML = ""
+
+            if(!now || !now.fields) return;
+
+            for(let name in now.fields) {
+                list.innerHTML += renderField(name)
+            }
+            if(selectedFieldName) {
+                document.querySelector(".editor:not(.field) .saveBtn").classList.remove("green")
+            } else {
+                document.querySelector(".editor:not(.field) .saveBtn").classList.add("green")
+            }
+        }
+        function renderField(name) {
+            if(!now || !now.fields || !now.fields[name]) {
+                return ''
+            }
+            let field = now.fields[name]
+
+            let template = document.getElementById("fieldTemplate").innerHTML
+            template = template.split('{selected}').join(field.name === selectedFieldName ? "selected" : "")
+            .split('{name}').join(field.name)
+            .split('{type}').join(field.type ? field.type : 'any')
+            return template
+        }
+
+        function removeField(name) {
+            delete now.fields[name]
+            refreshFields()
+        }
+
+        // state
+        function setState(s) {
+            let saveBtns = document.querySelectorAll(".editor .saveBtn")
+            if(s === "editor") {
+                saveBtns[0].classList.add("green")
+            } else {
+                saveBtns[0].classList.remove("green")
+            }
+            if(s === "fieldEditor") {
+                saveBtns[1].classList.add("green")
+            } else {
+                saveBtns[1].classList.remove("green")
+            }
+            state = s
+        }
+        // keyboard controll
+        let selectedName = null
+        let selectedFieldName = null
+        let selectedFieldType = null
+
+        document.addEventListener("keyup", e => {
+            // Enter ' ' Escape F2 Delete ArrowLeft ArrowRight ArrowUp ArrowDown
+            if(!state) return;
+            if(state === "main") {
+                if(e.key === " ") {
+                    return openEditor()
+                }
+                if(e.key === "Enter") {
+                    return openEditor(selectedName)
+                }
+                // if(e.key === "ArrowLeft" || e.key === "ArrowRight") {
+                if(e.key.startsWith("Arrow")) {
+                    let keys = []
+                    for(let key in data) {
+                        keys.push(key)
+                    }
+                    if(!selectedName) {
+                        if(!keys[0]) {
+                            return;
+                        }
+                        selectedName = keys[0];
+                    }
+                    if(e.key === "ArrowLeft") {
+                        let i = keys.indexOf(selectedName) - 1
+                        selectedName = keys[i === -1 ? keys.length - 1 : i]
+                    }
+                    if(e.key === "ArrowRight") {
+                        let i = keys.indexOf(selectedName) + 1
+                        selectedName = keys[i === keys.length ? 0 : i]
+                    }
+                    return refresh();
+                }
+                if(e.key === "F2") {
+                    if(selectedName) {
+                        openEditor(selectedName)
+                        return openRenamer()
+                    }
+                    return openRenamer()
+                }
+                if(e.key === "Delete") {
+                    if(selectedName) {
+                        remove(selectedName)
+                        selectedName = null
+                        return refresh()
+                    }
+                }
+                if(e.key === "Escape") {
+                    selectedName = null
+                    return refresh()
+                }
+            }
+            if(state === "renamer") {
+                if(e.key === "Enter") {
+                    return rename()
+                }
+                if(e.key === "Escape") {
+                    return quitRename()
+                }
+            }
+            if(state === "editor") {
+                if(e.key === "Enter") {
+                    if(selectedFieldName) {
+                        return openFieldEditor(selectedFieldName)
+                    }
+                    return save()
+                }
+                if(e.key === "Escape") {
+                    if(selectedFieldName) {
+                        selectedFieldName = null
+                        return refreshFields()
+                    }
+                    return closeEditor()
+                }
+                if(e.key === " ") {
+                    return openFieldEditor()
+                }
+                if(e.key === "F2") {
+                    // unnatural
+                    // if(selectedFieldName) {
+                    //     openFieldEditor(selectedFieldName)
+                    //     return openFieldRenamer()
+                    // }
+                    return openRenamer()
+                }
+                // if(e.key === "ArrowUp" || e.key === "ArrowDown") {
+                if(e.key.startsWith("Arrow")) {
+                    if(!now) {
+                        return;
+                    }
+                    let keys = []
+                    for(let key in now.fields) {
+                        keys.push(key)
+                    }
+                    if(!selectedFieldName) {
+                        if(!keys[0]) {
+                            return;
+                        }
+                        selectedFieldName = keys[0];
+                    }
+                    if(e.key === "ArrowUp") {
+                        let i = keys.indexOf(selectedFieldName) - 1
+                        selectedFieldName = keys[i === -1 ? keys.length - 1 : i]
+                    }
+                    if(e.key === "ArrowDown") {
+                        let i = keys.indexOf(selectedFieldName) + 1
+                        selectedFieldName = keys[i === keys.length ? 0 : i]
+                    }
+                    return refreshFields()
+                }
+                if(e.key === "Delete") {
+                    if(selectedFieldName) {
+                        removeField(selectedFieldName)
+                        selectedFieldName = null
+                        return refreshFields()
+                    }
+                }
+            }
+            if(state === "fieldRenamer") {
+                if(e.key === "Enter") {
+                    return renameField()
+                }
+                if(e.key === "Escape") {
+                    return quitRenameField()
+                }
+            }
+            if(state === "fieldTypeModifier") {
+                if(e.key === "Enter") {
+                    return addTypeModifier();
+                }
+                if(e.key === "Escape") {
+                    return quitFieldTypeModifier()
+                }
+                if(e.key === "F2") {
+                    quitFieldTypeModifier()
+                    return openFieldRenamer()
+                }
+            }
+            if(state === "fieldEditor") {
+                if(e.key === "Enter") {
+                    if(nowField.type !== decased(selectedFieldType.innerText)) {
+                        return openFieldTypeModifier()
+                    }
+                    return saveField()
+                }
+                if(e.key === "Escape") {
+                    return closeFieldEditor()
+                }
+                if(e.key === " ") {
+                    return openFieldTypeModifier()
+                }
+                if(e.key === "F2") {
+                    return openFieldRenamer()
+                }
+                if(e.key === "Delete") {
+                    delete nowField.newOptions
+                    delete nowField.options
+                    nowField.type = "any"
+                    return refreshFieldType()
+                }
+                // if(e.key === "ArrowLeft" || e.key === "ArrowRight") {
+                if(e.key.startsWith("Arrow")) {
+                    if(!selectedFieldType) {
+                        return;
+                    }
+                    let btns = [...document.querySelectorAll(".editor.field>.types>button").entries()].map(a => a[1])
+                    let i = btns.indexOf(selectedFieldType)
+                    selectedFieldType.classList.remove("selected")
+                    if(e.key === "ArrowLeft") {
+                        selectedFieldType = btns[i === 0 ? btns.length - 1 : i - 1]
+                    }
+                    if(e.key === "ArrowRight") {
+                        selectedFieldType = btns[i === btns.length - 1 ? 0 : i + 1]
+                    }
+                    selectedFieldType.classList.add("selected")
+
+                    if(nowField.type !== decased(selectedFieldType.innerText)) {
+                        document.querySelector(".editor.field .saveBtn").classList.remove("green")
+                    } else if(state === "fieldEditor") {
+                        document.querySelector(".editor.field .saveBtn").classList.add("green")
+                    }
+                    
+                    return;
+                }
+            }
+        })
+
+
+        // modifier auto complete
+        // types:
+        const any_t = "any"
+        const number_t = "number"
+        const string_t = "string"
+        const boolean_t = "boolean"
+        const date_t = "date"
+        const time_t = "time"
+        const datetime_t = "datetime"
+        const password_t = "password"
+        const article_t = "article"
+        const file_t = "file"
+        const location_t = "location"
+        const user_t = "user"
+        const role_t = "role"
+        const relation_t = "relation"
+        const all_t = [
+            any_t,
+            number_t,
+            string_t,
+            boolean_t,
+            date_t,
+            time_t,
+            datetime_t,
+            password_t,
+            article_t,
+            file_t,
+            location_t,
+            user_t,
+            role_t,
+            relation_t
+        ]
+        // basic mods for types
+        let basicModifiers = [
+            ["min=", [number_t, string_t, article_t, date_t, time_t, datetime_t, file_t]],
+            ["max=", [number_t, string_t, article_t, date_t, time_t, datetime_t, file_t]],
+            ["enum=", [number_t, string_t]],
+            ["match=", [string_t]],
+            ["trim", [string_t]],
+            ["lowercase", [string_t]],
+            ["uppercase", [string_t]],
+            ["default=", all_t],
+            ["unique", all_t],
+            ["required", all_t],
+            ["stream", [file_t]],
+            ["json", [file_t]],
+            ["index", all_t],
+            // ["id", all_t],
+            ["private", all_t],
+            // ["list", all_t.filter(t=>![user_t, relation_t].includes(t))],
+            ["list", all_t],
+            // ["virtual", all_t],
+            // ["one-way", [user_t, relation_t]],
+            // ["many-way", [user_t, relation_t]],
+            ["one-to-one", [user_t, relation_t]],
+            ["one-to-many", [user_t, relation_t]],
+            ["many-to-one", [user_t, relation_t]],
+            ["many-to-many", [user_t, relation_t]],
+            // ["overwrite", all_t],
+            ["populate", [user_t, relation_t]],
+            ["with=", [relation_t]],
+            ["named=", [user_t, relation_t]],
+            ["dependent", [user_t, relation_t]],
+            ["dependency", [user_t, relation_t]],
+            ["owner", [user_t, role_t]],
+            ["read", [user_t, role_t]],
+            ["update", [user_t, role_t]],
+            ["delete", [user_t, role_t]],
+        ]
+        // memory for second tab
+        let nowCompletes = []
+        // handler
+        document.querySelector(".editor.field>.modifier>input").addEventListener("keydown", e => {
+            if(e.key === "Tab") {
+                e.preventDefault()
+                let type = decased(selectedFieldType.innerText)
+                let basics = basicModifiers.filter(mod => mod[1].includes(type)).map(mod => mod[0])
+                let query = e.target.value
+                let i = nowCompletes.indexOf(query)
+                if(i < 0) {
+                    // first tab
+                    nowCompletes = basics.filter(mod => mod.startsWith(query))
+                    i = 0
+                } else if(!e.shiftKey) {
+                    // next tabs
+                    i = (i + 1) % nowCompletes.length
+                } else {
+                    i = i === 0 ? nowCompletes.length - 1 : i - 1
+                }
+                e.target.value = nowCompletes[i] || query
+            }
+        })
+        // modifier text change
+        document.querySelector(".editor.field>.modifier>input").addEventListener("input", refreshModifier)
+        // modifier backspace when empty
+        document.querySelector(".editor.field>.modifier>input").addEventListener("keydown", e => {
+            if(e.target.value === "") {
+                if(e.key === "Backspace" || e.key === "Delete") {
+                    let last;
+                    for(let opt in nowField.newOptions) {
+                        last = opt
+                    }
+                    if(last) {
+                        e.preventDefault()
+                        let val = nowField.newOptions[last]
+                        delete nowField.newOptions[last]
+                        e.target.value = last + (val !== true ? `=${val}` : "")
+                        refreshModifier()
+                    }
+                }
+            }
+        })
+
+        // save output
+        // YOU CAN CHANGE THIS FOR ALTERNATIVE METHODS OF SAVING
+        async function saveModel() {
+            console.log(data)
+            let res = await fetch('/generate', {
+                method: "POST",
+                headers: {
+                    "Content-Type": "Application/json"
+                },
+                body: JSON.stringify(data)
+            }).then(res=>res.text())
+            document.write(res)
+        }
+        // load a previously generated data
+        // YOU CAN REIMPLEMENT THIS TO LOAD YOUR DATA
+        async function loadModel() {
+            let res = await fetch('/load').then(res=>res.json())
+            data = res
+            refresh()
+        }
+        loadModel()
+        
+        // utils
+        function cased(str) {
+            return str[0].toUpperCase() + str.slice(1)
+        }
+        function decased(str) {
+            return str[0].toLowerCase() + str.slice(1)
+        }
+        function clone(obj) {
+            if(!obj) {
+                return obj
+            }
+            return JSON.parse(JSON.stringify(obj))
+        }
+    </script>
+</body>
+</html>
