@@ -33,7 +33,7 @@ app.post('/generate', (req, res) => {
         fs.rmdirSync(dir, { recursive: true, force: true })
         fs.mkdirSync(dir)
     }
-    gen(model, dir)
+    gen(req.body, dir)
     return res.send("ok")
 })
 
