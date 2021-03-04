@@ -484,6 +484,7 @@
         }
 
         function saveField() {
+            // TODO BUG when saving the field if type is unchanged newOption remains because saveTypeModifier isnt called
             if(nowField.name === "unnamed") {
                 alert("name the field before saving")
                 return openFieldRenamer()
