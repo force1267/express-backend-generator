@@ -33,7 +33,12 @@ app.post('/generate', (req, res) => {
         fs.rmdirSync(dir, { recursive: true, force: true })
         fs.mkdirSync(dir)
     }
-    gen(req.body, dir)
+    try {
+        gen(req.body, dir)
+    } catch (err) {
+        console.log(err.message)
+        return res.send(err.message)
+    }
     return res.send("ok")
 })
 
