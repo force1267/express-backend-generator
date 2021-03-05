@@ -311,6 +311,7 @@
 
         // field editor
         function openFieldEditor(name) {
+            quitFieldTypeModifier() // for testing
             let editor = document.getElementsByClassName('editor')[1]
             editor.classList.remove('closed')
             if(!now.fields[name]) {
@@ -372,6 +373,9 @@
             setState("fieldEditor")
         }
         function refreshFieldType() {
+            if(!nowField) {
+                return
+            }
             let selected = document.querySelector(".editor.field>.types>button.selected")
             if(selected) {
                 selected.classList.remove("selected")
@@ -451,7 +455,9 @@
             refreshModifier()
         }
         function quitFieldTypeModifier() {
-            delete nowField.newOptions
+            if(nowField) {
+                delete nowField.newOptions
+            }
             refreshFieldType()
             let modifier = document.querySelector(".editor.field>.modifier")
             modifier.classList.add("closed")
