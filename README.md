@@ -4,7 +4,8 @@ script to generate a whole project including:
 - mongoose schemas and models
 - webapp gui to create models without code
 ####  soon
-- auth
+- auth (on it)
+- environmet variable configs
 - admin panel
 - dev panel
 - email
