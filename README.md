@@ -6,6 +6,7 @@ script to generate a whole project including:
 ####  soon
 - auth (on it)
 - environmet variable configs
+- file uploads
 - admin panel
 - dev panel
 - email
